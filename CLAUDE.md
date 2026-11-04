@@ -21,11 +21,10 @@ scripts/
   knobs.py                        pedalboard chain; KNOBS spec; vector<->params; render()
   audio_feature_extraction.py     librosa+pyloudnorm 61-dim vector; z-score; distance()
   optimize_match.py               the optimizer: match base -> target, save matched wav
-data/
-  raw_vocal_samples/              my dry vocals (7 OBS recordings -> mono 44.1k wav)
-  raw_vocal_clips/                (more of my dry clips, 30s)
-  mixed_vocal_clips/              target reference vocals (30s mono from the sample lib)
-matches/                          optimizer output: matched wavs + knob json + summary
+vocal_data/
+  raw/                            my dry vocals, the input to match (OBS recordings -> mono 44.1k wav)
+  mixed/                          target pre-mixed reference vocals (30s mono from the sample lib)
+  matched/                        optimizer output: matched wavs + knob json
 pyproject.toml / poetry.lock      Poetry env (pinned numpy/librosa + cma)
 ```
 Env lives in `D:\.venvs` (Poetry-managed, out of repo). Run everything via `poetry run`.
@@ -47,7 +46,7 @@ Env lives in `D:\.venvs` (Poetry-managed, out of repo). Run everything via `poet
   <target.wav>`. Searches knobs (CMA-ES) to minimize **clipped** z-scored feature distance
   (per-dim diff clipped to ±4σ so a few unreachable features don't dominate). Scaling is
   self-contained (built from random renders of the base). Analyzes the first `--seconds`
-  (default 8) for speed, applies the winning knobs to the full vocal, saves to `matches/`.
+  (default 8) for speed, applies the winning knobs to the full vocal, saves to `vocal_data/matched/`.
   `--demo` self-check recovers a reachable target. `--maxfevals` = budget (more = closer).
 
 ## Conventions

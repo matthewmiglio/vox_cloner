@@ -26,11 +26,10 @@ vox_cloner/
     knobs.py                      32-knob pedalboard chain; param spec; render()
     audio_feature_extraction.py   61-dim feature vector (tone + dynamics); z-score
     optimize_match.py             CMA-ES optimizer: match base -> target, save matched wav
-  data/
-    raw_vocal_samples/            my dry vocals (mono 44.1k wav)
-    raw_vocal_clips/              more of my dry clips (30s)
-    mixed_vocal_clips/            target reference vocals (30s mono)
-  matches/                        optimizer output: matched wavs + knob json + summary
+  vocal_data/
+    raw/                          my dry vocals, the input to match (mono 44.1k wav)
+    mixed/                        target pre-mixed reference vocals (30s mono)
+    matched/                      optimizer output: matched wavs + knob json
   pyproject.toml / poetry.lock    Poetry env (pinned numpy/librosa + cma)
 ```
 
@@ -46,7 +45,7 @@ Three modules, each with a runnable self-check (`--demo` / run directly):
 - **`optimize_match.py`** — the optimizer. Minimizes a **clipped** z-scored feature
   distance (each dimension capped at ±4σ so a few features my vocal can't reach don't
   dominate the score). Searches on the first few seconds for speed, then applies the
-  winning knobs to the full vocal and writes it to `matches/`.
+  winning knobs to the full vocal and writes it to `vocal_data/matched/`.
 
 ## System diagram
 
@@ -69,7 +68,7 @@ Three modules, each with a runnable self-check (`--demo` / run directly):
   └──────────────────────────────┬───────────────────────────────┘
                                  │ best knobs
                                  ▼
-                 render(full base, best knobs)  ──►  matches/…_matched.wav
+                 render(full base, best knobs)  ──►  vocal_data/matched/…_matched.wav
                                  └─────────────► …_knobs.json
 ```
 
@@ -96,27 +95,69 @@ poetry run python scripts/optimize_match.py --demo     # optimizer recovers a ta
 
 (The first librosa call in a fresh process spends ~15s on a one-time numba compile.)
 
-## Usage
+## Usage — walkthrough
 
-Match one dry vocal to one target:
+Match one dry vocal (a file in `vocal_data/raw/`) to one pre-mixed target (a file in
+`vocal_data/mixed/`). Worked example with files already in the repo:
+
+**1. Pick your raw vocal.** One of your dry recordings:
+
+```
+vocal_data/raw/2026-11-04 09-32-20.wav
+```
+
+**2. Pick the pre-mixed vocal to copy the tone of.** A reference whose sound you want:
+
+```
+vocal_data/mixed/us - lil peep - 149bpm - 72 bars.wav
+```
+
+**3. Run the optimizer** (base first, target second):
 
 ```bash
 poetry run python scripts/optimize_match.py \
-    "data/raw_vocal_samples/my_take.wav" \
-    "data/mixed_vocal_clips/us - lil peep - 149bpm - 72 bars.wav"
+    "vocal_data/raw/2026-11-04 09-32-20.wav" \
+    "vocal_data/mixed/us - lil peep - 149bpm - 72 bars.wav"
 ```
+
+It searches knob settings on the first 8 seconds, then renders your full vocal with the
+winning knobs. ~15s one-time numba compile on the first run, then the search.
+
+**4. Listen to the result.** Two files land in `vocal_data/matched/`:
+
+```
+vocal_data/matched/2026-11-04_09-32-20__matched_to__us_-_lil_peep_-_149bpm_-_72_bars.wav
+...__matched_to__..._knobs.json   # the knob values it chose
+```
+
+The console also prints the raw-vs-target distance, the best matched distance, and the
+**% closer** the match got. For the example above it reported the matched vocal landing
+**14.5% closer** to the SuicideBoys target than the dry take.
+
+### Hear it
+
+<!-- Audio is hosted via a GitHub issue (drag the wavs in, paste the resulting
+     *.githubusercontent.com URLs below). Local .wav paths won't play on github.com. -->
+
+**Raw** — my dry vocal:
+
+https://github.com/REPLACE_WITH_RAW_URL
+
+**Target** — the pre-mixed SuicideBoys vocal whose tone we're copying:
+
+https://github.com/REPLACE_WITH_TARGET_URL
+
+**Matched** — my vocal after the optimizer applied its knobs (14.5% closer to the target):
+
+https://github.com/REPLACE_WITH_MATCHED_URL
 
 Options:
 
 | Flag | Meaning | Default |
 |------|---------|---------|
-| `--out PATH` | where to write the matched wav | `matches/<base>__matched_to__<target>.wav` |
+| `--out PATH` | where to write the matched wav | `vocal_data/matched/<base>__matched_to__<target>.wav` |
 | `--seconds N` | audio length used during the search (longer = slower) | `8` |
 | `--maxfevals N` | optimizer budget — more evals = closer match, slower | `1250` |
-
-Output per run: the full matched vocal (`matches/…_matched…wav`) and the chosen knob
-values (`…_knobs.json`). It also prints the distance of the raw vocal vs the target,
-the best matched distance, and the **% closer** the match got.
 
 **Judge by ear, not just the number.** A lower distance means the features line up; it
 doesn't guarantee it sounds right. Audio is mono 44.1 kHz throughout. Audio files are

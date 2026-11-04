@@ -13,7 +13,10 @@ __pycache__/
 *.aiff
 
 # Optimizer output
-matches/
+vocal_data/matched/
+
+# Example clips are hosted via a GitHub issue (see README), not committed
+vocal_data/example/
 
 # OS / editor
 .DS_Store

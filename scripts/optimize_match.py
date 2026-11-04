@@ -105,7 +105,7 @@ def run(base_path: str, target_path: str, out_path: str | None,
     if out_path is None:
         bstem = os.path.splitext(os.path.basename(base_path))[0].replace(" ", "_")
         tstem = os.path.splitext(os.path.basename(target_path))[0].replace(" ", "_")
-        out_dir = os.path.join(os.path.dirname(__file__), "..", "matches")
+        out_dir = os.path.join(os.path.dirname(__file__), "..", "vocal_data", "matched")
         os.makedirs(out_dir, exist_ok=True)
         out_path = os.path.join(out_dir, f"{bstem}__matched_to__{tstem}.wav")
     matched = render(base_full, sr, params)
@@ -128,7 +128,7 @@ def _demo() -> None:
     drives the distance far down (the loop works)."""
     from knobs import render as _r, random_params
     files = sorted(glob.glob(os.path.join(os.path.dirname(__file__), "..",
-                                           "data", "raw_vocal_samples", "*.wav")))
+                                           "vocal_data", "raw", "*.wav")))
     sr = SR
     if files:
         base, _ = load(files[0], sr=sr)
