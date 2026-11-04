@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.poetry/
+
+# Audio — inputs and outputs. Reference vocals are copyrighted; never publish them.
+*.wav
+*.mp3
+*.flac
+*.ogg
+*.aif
+*.aiff
+
+# Optimizer output
+matches/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

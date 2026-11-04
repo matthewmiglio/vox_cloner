@@ -1,0 +1,22 @@
+[tool.poetry]
+# Not a installable package, just a scripts/ repo -> no module layout required.
+package-mode = false
+
+[tool.poetry.dependencies]
+python = ">=3.11,<3.13"
+
+# --- pinned: newer numpy 2.x hangs librosa.stft on this machine (see CLAUDE.md) ---
+numpy = "1.26.4"
+librosa = "0.10.2"
+
+# --- audio / dsp / features ---
+pyloudnorm = "*"
+soundfile = "*"
+pedalboard = "*"
+
+# --- per-pair knob optimizer ---
+cma = "*"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
