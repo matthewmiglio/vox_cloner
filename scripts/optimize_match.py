@@ -80,7 +80,9 @@ def optimize(base: np.ndarray, sr: int, target_feats: np.ndarray, stats: dict,
 
     es = cma.CMAEvolutionStrategy(x0, 0.25, {
         "bounds": [0.0, 1.0], "maxfevals": maxfevals,
-        "seed": seed, "verbose": -9, "verb_disp": 0,
+        # pycma treats seed 0/None as time-based (nondeterministic): shift to >=1
+        # so runs are reproducible and A/B comparisons are valid.
+        "seed": int(seed) + 1, "verbose": -9, "verb_disp": 0,
     })
     while not es.stop():
         sols = es.ask()
@@ -89,8 +91,32 @@ def optimize(base: np.ndarray, sr: int, target_feats: np.ndarray, stats: dict,
     return unit_to_params(best), dist_raw, float(es.result.fbest), dist_neutral
 
 
+def _seed_worker(args):
+    return optimize(*args)
+
+
+def optimize_multi(base: np.ndarray, sr: int, target_feats: np.ndarray, stats: dict,
+                   maxfevals: int = 1250, seeds=(0, 1, 2),
+                   jobs: int | None = None) -> tuple[dict, float, float, float]:
+    """Multi-start: run `seeds` independent CMA searches, keep the one with the
+    lowest distance. CMA-ES from a single start is high-variance (different seeds
+    land in very different optima), so best-of-N reliably beats a single run AND a
+    single longer run (which plateaus) -- the sanctioned 'smarter search', not just
+    more budget. Seeds run in parallel.
+    """
+    tasks = [(base, sr, target_feats, stats, maxfevals, s) for s in seeds]
+    jobs = jobs or len(seeds)
+    if jobs > 1 and len(seeds) > 1:
+        import multiprocessing as mp
+        with mp.Pool(min(jobs, len(seeds))) as pool:
+            results = pool.map(_seed_worker, tasks)
+    else:
+        results = [_seed_worker(t) for t in tasks]
+    return min(results, key=lambda r: r[2])  # lowest dist_best
+
+
 def run(base_path: str, target_path: str, out_path: str | None,
-        seconds: float, maxfevals: int) -> dict:
+        seconds: float, maxfevals: int, seeds=(0, 1, 2)) -> dict:
     base_full, sr = load(base_path, sr=SR)
     target_full, _ = load(target_path, sr=SR)
 
@@ -99,7 +125,8 @@ def run(base_path: str, target_path: str, out_path: str | None,
     target_feats = extract_features(target_full, sr)   # characterize full target
     stats = get_stats(base_opt, sr)
 
-    params, d_raw, d_best, d_neutral = optimize(base_opt, sr, target_feats, stats, maxfevals)
+    params, d_raw, d_best, d_neutral = optimize_multi(base_opt, sr, target_feats, stats,
+                                                       maxfevals, seeds=seeds)
 
     # apply winning knobs to the FULL base vocal and save for listening
     if out_path is None:
@@ -157,7 +184,8 @@ def main() -> None:
     ap.add_argument("target", nargs="?", help="target isolated vocal .wav")
     ap.add_argument("--out", default=None, help="output matched .wav path")
     ap.add_argument("--seconds", type=float, default=8.0, help="audio length used for the search")
-    ap.add_argument("--maxfevals", type=int, default=1250, help="optimizer budget (more = slower, closer; ~1250 is the taper point)")
+    ap.add_argument("--maxfevals", type=int, default=1250, help="optimizer budget per seed (~1250 is the single-run taper point)")
+    ap.add_argument("--seeds", default="0,1,2", help="multi-start seeds, best kept (more seeds = reliably closer; parallelized)")
     ap.add_argument("--demo", action="store_true")
     args = ap.parse_args()
 
@@ -167,7 +195,8 @@ def main() -> None:
     if not (args.base and args.target):
         ap.error("pass <base.wav> <target.wav>, or --demo")
 
-    res = run(args.base, args.target, args.out, args.seconds, args.maxfevals)
+    seeds = tuple(int(s) for s in str(args.seeds).split(","))
+    res = run(args.base, args.target, args.out, args.seconds, args.maxfevals, seeds)
     print(json.dumps({k: v for k, v in res.items() if k != "params"}, indent=2))
     print(f"\nsaved matched vocal -> {res['out_wav']}")
     print("listen: does it sit tonally like the target? distance going down != sounds right.")
