@@ -51,18 +51,18 @@ KNOBS: dict[str, tuple[float, float, float]] = {
     "comp_release_ms":    (10.0,   500.0,  100.0),
     # --- saturation ---
     "drive_db":           (0.0,    20.0,   0.0),
-    # --- chorus ---
+    # --- chorus ---  # ponytail: mix/depth capped so optimizer can't warble-smear the vocal to game the metric
     "chorus_rate_hz":     (0.1,    5.0,    1.0),
-    "chorus_depth":       (0.0,    1.0,    0.0),
-    "chorus_mix":         (0.0,    1.0,    0.0),
-    # --- delay ---
+    "chorus_depth":       (0.0,    0.3,    0.0),
+    "chorus_mix":         (0.0,    0.2,    0.0),
+    # --- delay ---  # ponytail: feedback/mix capped; high-feedback short delay = metallic comb ringing
     "delay_seconds":      (0.0,    0.8,    0.0),
-    "delay_feedback":     (0.0,    0.8,    0.0),
-    "delay_mix":          (0.0,    1.0,    0.0),
-    # --- reverb ---
+    "delay_feedback":     (0.0,    0.35,   0.0),
+    "delay_mix":          (0.0,    0.25,   0.0),
+    # --- reverb ---  # ponytail: wet capped so the vocal isn't drowned
     "reverb_room_size":   (0.0,    1.0,    0.2),
     "reverb_damping":     (0.0,    1.0,    0.5),
-    "reverb_wet":         (0.0,    1.0,    0.0),
+    "reverb_wet":         (0.0,    0.35,   0.0),
     # --- output ---
     "output_gain_db":     (-12.0,  12.0,   0.0),
 }
